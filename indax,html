@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bluetooth</title>
+<style>
+:root{--bg:#eef2f7;--panel:#fff;--ink:#14213d;--muted:#5b6b85;--line:#d6dee9;--accent:#2b59ff;--ok:#1f9d6b;--err:#d64545}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1626;--panel:#16223a;--ink:#e8eefc;--muted:#8fa1c2;--line:#26365a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 40px;display:grid;gap:14px}
+h1{margin:0;font-size:1.7rem}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.bt{display:flex;align-items:center;gap:12px}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--line);flex:none}
+.dot.on{background:var(--ok)}.dot.off{background:var(--err)}
+.muted{color:var(--muted);font-size:.9rem}
+button{font:inherit;font-weight:600;padding:12px 18px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;width:100%;font-size:1.1rem;padding:16px}
+button:disabled{opacity:.45}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+li b{display:block}
+.big{font-size:2.2rem;font-weight:700}
+pre{margin:0;background:#14213d;color:#cfe0ff;border-radius:10px;padding:10px;height:150px;overflow:auto;font-size:.8rem;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<main>
+  <h1>Bluetooth</h1>
+
+  <section class="panel bt">
+    <div class="dot" id="dot"></div>
+    <div><strong id="btState">Bluetooth check ho raha hai...</strong><div class="muted" id="btHint"></div></div>
+  </section>
+
+  <button class="primary" id="scanBtn">Devices dhoondo</button>
+
+  <section class="panel">
+    <strong>Nazdeek devices</strong>
+    <ul id="devices"><li class="muted">Abhi koi device nahi. "Devices dhoondo" dabao.</li></ul>
+  </section>
+
+  <section class="panel" id="connected" hidden>
+    <strong id="devName"></strong>
+    <div class="muted" id="devState"></div>
+    <div class="big" id="battery">--</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button id="batteryBtn">Battery dekho</button>
+      <button id="disconnectBtn">Disconnect</button>
+    </div>
+  </section>
+
+  <pre id="log"></pre>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const seen = new Map();
+let device = null, server = null;
+
+function log(m){ $('log').textContent += new Date().toLocaleTimeString()+'  '+m+'\n'; $('log').scrollTop = 1e9; }
+
+async function checkBluetooth(){
+  if(!navigator.bluetooth){
+    $('dot').className='dot off';
+    $('btState').textContent='Ye browser Bluetooth support nahi karta';
+    $('btHint').textContent='Android/PC par Chrome ya Edge use karo.';
+    $('scanBtn').disabled = true; return;
+  }
+  try{
+    const ok = await navigator.bluetooth.getAvailability();
+    $('dot').className = 'dot ' + (ok ? 'on' : 'off');
+    $('btState').textContent = ok ? 'Bluetooth ON hai' : 'Bluetooth band hai';
+    $('btHint').textContent = ok ? 'Devices dhoondne ke liye neeche button dabao.' : 'Phone/PC ki settings me Bluetooth on karo.';
+  }catch(e){ $('btState').textContent='Bluetooth ready'; }
+}
+navigator.bluetooth && navigator.bluetooth.addEventListener && navigator.bluetooth.addEventListener('availabilitychanged', checkBluetooth);
+checkBluetooth();
+
+function render(){
+  const ul = $('devices'); ul.innerHTML='';
+  if(!seen.size){ ul.innerHTML='<li class="muted">Koi device nahi mila.</li>'; return; }
+  seen.forEach((d,id)=>{
+    const li=document.createElement('li');
+    li.innerHTML='<div><b></b><span class="muted"></span></div>';
+    li.querySelector('b').textContent = d.name || 'Unnamed device';
+    li.querySelector('span').textContent = d.rssi!=null ? 'Signal: '+d.rssi+' dBm' : id.slice(0,18);
+    const b=document.createElement('button'); b.textContent='Connect'; b.onclick=()=>connect(d.device);
+    li.append(b); ul.append(li);
+  });
+}
+
+async function scan(){
+  // Try a live scan list first (needs Chrome flag), else use the browser's device picker.
+  if(navigator.bluetooth.requestLEScan){
+    try{
+      const s = await navigator.bluetooth.requestLEScan({acceptAllAdvertisements:true, keepRepeatedDevices:false});
+      log('Live scan chalu.');
+      navigator.bluetooth.addEventListener('advertisementreceived', e=>{
+        seen.set(e.device.id,{device:e.device,name:e.device.name,rssi:e.rssi}); render();
+      });
+      setTimeout(()=>{ s.stop(); log('Scan band.'); }, 15000);
+      return;
+    }catch(e){ log('Live scan nahi chala, picker khol raha hoon.'); }
+  }
+  try{
+    const d = await navigator.bluetooth.requestDevice({
+      acceptAllDevices:true, optionalServices:['battery_service','heart_rate','device_information']
+    });
+    seen.set(d.id,{device:d,name:d.name}); render();
+    connect(d);
+  }catch(e){ log('Scan: '+e.message); }
+}
+
+async function connect(d){
+  try{
+    device=d; $('connected').hidden=false;
+    $('devName').textContent=d.name||'Unnamed device'; $('devState').textContent='Connect ho raha hai...';
+    d.addEventListener('gattserverdisconnected',()=>{ $('devState').textContent='Disconnect ho gaya'; log('Disconnected.'); });
+    server = await d.gatt.connect();
+    $('devState').textContent='Connected'; log('Connected: '+(d.name||d.id));
+  }catch(e){ $('devState').textContent='Connect nahi hua'; log('Connect: '+e.message); }
+}
+
+async function battery(){
+  try{
+    const c = await (await server.getPrimaryService('battery_service')).getCharacteristic('battery_level');
+    $('battery').textContent = (await c.readValue()).getUint8(0)+'%';
+  }catch(e){ log('Battery: '+e.message); }
+}
+
+$('scanBtn').onclick=scan;
+$('batteryBtn').onclick=battery;
+$('disconnectBtn').onclick=()=>device&&device.gatt.connected&&device.gatt.disconnect();
+</script>
+</body>
+</html>
