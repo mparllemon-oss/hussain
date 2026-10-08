@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10141d">
+<title>GlassCalc — iOS Scientific Calculator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app" aria-label="Scientific Calculator">
+ <div class="header">
+  <div class="brand">Glass<span>Calc</span></div>
+  <div class="header-actions">
+   <button class="mini" id="angleButton" aria-label="Toggle degrees and radians" title="Angle unit">DEG</button>
+   <button class="mini" id="scienceButton" aria-pressed="false" aria-controls="scienceKeys">ƒx</button>
+   <button class="mini" id="historyButton" aria-label="Open calculation history">History</button>
+  </div>
+ </div>
+ <div class="display" id="display" title="Swipe left to delete">
+  <div class="expression" id="preview" aria-label="Calculation preview"></div>
+  <div class="result" id="result" aria-live="polite">0</div>
+ </div>
+ <div class="memory-indicator" id="memoryStatus" aria-live="polite"></div>
+ <div class="scientific" id="scienceKeys" hidden>
+  <button class="key" data-value="sin(" title="Sine">sin</button>
+  <button class="key" data-value="cos(" title="Cosine">cos</button>
+  <button class="key" data-value="tan(" title="Tangent">tan</button>
+  <button class="key" data-value="√(" title="Square root">√</button>
+  <button class="key" data-value="^" title="Exponent">xʸ</button>
+  <button class="key" data-value="(" title="Open parenthesis">(</button>
+  <button class="key" data-value=")" title="Close parenthesis">)</button>
+  <button class="key" data-value="π" title="Pi">π</button>
+  <button class="key" data-value="ℯ" title="Euler's number">e</button>
+  <button class="key" data-action="square" title="Square">x²</button>
+ </div>
+ <div class="memory" aria-label="Memory operations">
+  <button class="key" data-action="mc">MC</button>
+  <button class="key" data-action="mr">MR</button>
+  <button class="key" data-action="mplus">M+</button>
+  <button class="key" data-action="mminus">M−</button>
+  <button class="key" data-action="backspace" aria-label="Delete last character">⌫</button>
+ </div>
+ <div class="keys" aria-label="Calculator keypad">
+  <button class="key func" id="clearButton" data-action="clear">AC</button>
+  <button class="key func" data-action="sign">±</button>
+  <button class="key func" data-action="percent">%</button>
+  <button class="key operator" data-value="÷">÷</button>
+  <button class="key" data-value="7">7</button><button class="key" data-value="8">8</button><button class="key" data-value="9">9</button><button class="key operator" data-value="×">×</button>
+  <button class="key" data-value="4">4</button><button class="key" data-value="5">5</button><button class="key" data-value="6">6</button><button class="key operator" data-value="−">−</button>
+  <button class="key" data-value="1">1</button><button class="key" data-value="2">2</button><button class="key" data-value="3">3</button><button class="key operator" data-value="+">+</button>
+  <button class="key zero" data-value="0">0</button><button class="key" data-value=".">.</button><button class="key operator" data-action="equals">=</button>
+ </div>
+ <p class="hint">Keyboard supported · Swipe left on the display to delete</p>
+ <div class="scrim" id="scrim"></div>
+ <aside class="drawer" id="drawer" aria-label="Calculation history" aria-hidden="true">
+  <div class="drawer-head"><h2>History</h2><button class="mini history-close" id="closeHistory" aria-label="Close history">✕</button></div>
+  <div class="history-list" id="historyList"></div>
+  <div class="drawer-footer"><button class="mini" id="clearHistory">Clear history</button><button class="mini" id="closeHistoryBottom">Done</button></div>
+ </aside>
+</main>
+<script src="script.js"></script>
+</body>
+</html>
